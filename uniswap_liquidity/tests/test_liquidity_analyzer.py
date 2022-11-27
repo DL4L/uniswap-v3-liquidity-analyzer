@@ -3,7 +3,7 @@ import subprocess
 import unittest
 from web3 import Web3
 from uniswap_liquidity.uni_v3_pool import V3LiquidityPool
-from uniswap_liquidity.liquidity_analyzer import get_tokens_to_target_price, sqrt_x96_price_to_sqrt_price
+from uniswap_liquidity.liquidity_analyzer import get_tokens_to_target_price, sqrt_x96_price_to_sqrt_price, get_nearest_ticks
 from uniswap_liquidity.uni_v3_router_abi import UNI_V3_ROUTER_ABI
 from uniswap_liquidity.erc20_abi import ERC_20_SIMPLE_ABI
 import json
@@ -69,31 +69,83 @@ class TestLiquidityAnalyzer(unittest.TestCase):
         print(f"Weth Balance: {token.caller.balanceOf(self.account)}")
         _approve_token(self.w3, token, self.router.address, self.account, self.private_key)
 
-        current_sqrt_price = sqrt_x96_price_to_sqrt_price(dai_eth_pool.sqrt_price_x96)
-        print(f"current sqrt price: {current_sqrt_price}")
 
-        target_sqrt_price = current_sqrt_price * 1.02
-        amount_out = get_tokens_to_target_price(dai_eth_pool, target_sqrt_price)
-        params = (
-            dai_eth_pool.token1,
-            dai_eth_pool.token0,
-            dai_eth_pool.fee,
-            self.account,
-            int(time.time()) + 10 * 60,
-            int(amount_out),
-            10**30,
-            0,
-        )
-        print(params)
-        nonce = self.w3.eth.getTransactionCount(self.account)
-        tx = self.router.functions.exactOutputSingle(params).build_transaction({"from": self.account, "value": 0, "nonce": nonce})
-        print(tx)
-        signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
-        self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        for target_multiplier in [1.001]:
+            current_sqrt_price = sqrt_x96_price_to_sqrt_price(dai_eth_pool.sqrt_price_x96)
+            tick_below, tick_above = get_nearest_ticks(dai_eth_pool.tick, dai_eth_pool.tick_spacing)
+            print(f"current sqrt price: {current_sqrt_price}")
+            print(f"current tick below: {tick_below}. current tick: {dai_eth_pool.tick} . current tick above: {tick_above}")
+            print(f"tick below liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_below)[1]}")
+            print(f"tick above liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_above)[1]}")
+            target_sqrt_price = current_sqrt_price * target_multiplier
+            amount_out = get_tokens_to_target_price(dai_eth_pool, target_sqrt_price)
+            params = (
+                dai_eth_pool.token1,
+                dai_eth_pool.token0,
+                dai_eth_pool.fee,
+                self.account,
+                int(time.time()) + 10 * 60,
+                int(amount_out),
+                10**30,
+                0,
+            )
 
-        dai_eth_pool.update()
-        new_sqrt_price = sqrt_x96_price_to_sqrt_price(dai_eth_pool.sqrt_price_x96)
-        self.assertAlmostEqual(new_sqrt_price, target_sqrt_price, places=8)
+            nonce = self.w3.eth.getTransactionCount(self.account)
+            tx = self.router.functions.exactOutputSingle(params).build_transaction({"from": self.account, "value": 0, "nonce": nonce})
+            print(tx)
+            signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
+            self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+            dai_eth_pool.update()
+            tick_below, tick_above = get_nearest_ticks(dai_eth_pool.tick, dai_eth_pool.tick_spacing)
+            print(f"current tick below: {tick_below}. current tick: {dai_eth_pool.tick}  . current tick above: {tick_above}")
+            print(f"tick below liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_below)[1]}")
+            print(f"tick above liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_above)[1]}")
+            print("-"*100)
+            new_sqrt_price = sqrt_x96_price_to_sqrt_price(dai_eth_pool.sqrt_price_x96)
+            self.assertAlmostEqual(new_sqrt_price, target_sqrt_price, places=8)
+
+    def test_liquidity_analyzer_2(self):
+        dai_eth_pool = V3LiquidityPool(DAI_ETH_POOL_ADDRESS, self.w3)
+        token = self.w3.eth.contract(dai_eth_pool.token1, abi=ERC_20_SIMPLE_ABI)
+        print(f"Weth Balance: {token.caller.balanceOf(self.account)}")
+        _approve_token(self.w3, token, self.router.address, self.account, self.private_key)
+
+
+        for target_multiplier in [1.05]:
+            current_sqrt_price = sqrt_x96_price_to_sqrt_price(dai_eth_pool.sqrt_price_x96)
+            tick_below, tick_above = get_nearest_ticks(dai_eth_pool.tick, dai_eth_pool.tick_spacing)
+            print(f"current sqrt price: {current_sqrt_price}")
+            print(f"current tick below: {tick_below}. current tick: {dai_eth_pool.tick} . current tick above: {tick_above}")
+            print(f"tick below liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_below)[1]}")
+            print(f"tick above liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_above)[1]}")
+            target_sqrt_price = current_sqrt_price * target_multiplier
+            amount_out = get_tokens_to_target_price(dai_eth_pool, target_sqrt_price)
+            params = (
+                dai_eth_pool.token1,
+                dai_eth_pool.token0,
+                dai_eth_pool.fee,
+                self.account,
+                int(time.time()) + 10 * 60,
+                int(amount_out),
+                10**30,
+                0,
+            )
+
+            nonce = self.w3.eth.getTransactionCount(self.account)
+            tx = self.router.functions.exactOutputSingle(params).build_transaction({"from": self.account, "value": 0, "nonce": nonce})
+            print(tx)
+            signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
+            self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+            dai_eth_pool.update()
+            tick_below, tick_above = get_nearest_ticks(dai_eth_pool.tick, dai_eth_pool.tick_spacing)
+            print(f"current tick below: {tick_below}. current tick: {dai_eth_pool.tick}  . current tick above: {tick_above}")
+            print(f"tick below liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_below)[1]}")
+            print(f"tick above liquidity: {dai_eth_pool._pool_contract.caller.ticks(tick_above)[1]}")
+            print("-"*100)
+            new_sqrt_price = sqrt_x96_price_to_sqrt_price(dai_eth_pool.sqrt_price_x96)
+            self.assertAlmostEqual(new_sqrt_price, target_sqrt_price, places=8)
 
 def _approve_token(w3, token, spender_address, account, private_key):
 

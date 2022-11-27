@@ -39,8 +39,9 @@ class BaseV3LiquidityPool(ABC):
                 updates = True
                 self.liquidity = liquidity
 
-        except:
-            raise
+        except Exception as e:
+            raise RuntimeError(f"Could not update pool info for {self.address}") from e
+            
         else:
             return updates, {
                 "slot0": self.slot0,
