@@ -8,7 +8,11 @@ Tick = namedtuple("Tick", "liquidityGross liquidityNet feeGrowthOutside0X128 fee
 def get_token_amounts(liquidity, sqrt_price_x96, tick_lower_bound, tick_upper_bound, token0_decimal, token1_decimal):
     sqrt_ratio_a = tick_index_price(tick_lower_bound) ** 0.5
     sqrt_ratio_b = tick_index_price(tick_upper_bound) ** 0.5
+<<<<<<< HEAD
     current_tick = log((sqrt_price_x96/2**96)**2)//log(1.0001)
+=======
+    current_tick = log(sqrt_price_x96, 1.0001**0.5)
+>>>>>>> 5639ec0be9a17fc85194c871b7ee6bc76369f962
     sqrt_price = sqrt_x96_price_to_sqrt_price(sqrt_price_x96)
     amount0wei = 0
     amount1wei = 0
