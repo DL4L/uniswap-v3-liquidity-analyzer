@@ -4,8 +4,8 @@ import unittest
 from web3 import Web3
 from uniswap_liquidity.uni_v3_pool import V3LiquidityPool
 from uniswap_liquidity.liquidity_analyzer import get_tokens_to_target_price, sqrt_x96_price_to_sqrt_price, get_nearest_ticks
-from uniswap_liquidity.uni_v3_router_abi import UNI_V3_ROUTER_ABI
-from uniswap_liquidity.erc20_abi import ERC_20_SIMPLE_ABI
+from uniswap_liquidity.abi.uni_v3_router_abi import UNI_V3_ROUTER_ABI
+from uniswap_liquidity.abi.erc20_abi import ERC_20_SIMPLE_ABI
 import json
 import time
 
